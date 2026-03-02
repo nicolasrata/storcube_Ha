@@ -257,17 +257,20 @@ async def create_lovelace_view(hass: HomeAssistant, config_entry: ConfigEntry) -
     }
 
     try:
-        # Ajouter la vue à la configuration Lovelace existante
-        await hass.services.async_call(
-            "lovelace",
-            "save_config",
-            {
-                "config": {
-                    "views": [view_config]
+        if hass.services.has_service("lovelace", "save_config"):
+            # Ajouter la vue à la configuration Lovelace existante
+            await hass.services.async_call(
+                "lovelace",
+                "save_config",
+                {
+                    "config": {
+                        "views": [view_config]
+                    }
                 }
-            }
-        )
-        _LOGGER.info("Vue Lovelace Storcube créée avec succès")
+            )
+            _LOGGER.info("Vue Lovelace Storcube créée avec succès")
+        else:
+            _LOGGER.warning("Le service lovelace.save_config n'est pas disponible. La vue Lovelace automatique ne sera pas créée.")
     except Exception as e:
         _LOGGER.error("Erreur lors de la création de la vue Lovelace: %s", str(e))
 

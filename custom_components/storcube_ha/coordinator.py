@@ -204,9 +204,10 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
         """Récupérer le token d'authentification."""
         # Utilisez le stockage sécurisé pour stocker le token
         storage_key = f"{DOMAIN}_auth_token"
-        token = await storage.async_get(self.hass, storage_key)
-        if token:
-            return token
+        store = storage.Store(self.hass, 1, storage_key)
+        token_data = await store.async_load()
+        if token_data and isinstance(token_data, dict) and "token" in token_data:
+            return token_data["token"]
 
         # Si le token n'existe pas, effectuez l'authentification
         try:
@@ -226,7 +227,8 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             if data.get('code') == 200:
                 _LOGGER.info("Token récupéré avec succès")
                 self._auth_token = data['data']['token']
-                await storage.async_set(self.hass, storage_key, self._auth_token)
+                store = storage.Store(self.hass, 1, storage_key)
+                await store.async_save({"token": self._auth_token})
                 return self._auth_token
             raise Exception(f"Erreur d'authentification: {data.get('message', 'Réponse inconnue')}")
         except Exception as e:
