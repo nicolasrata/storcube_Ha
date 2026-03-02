@@ -221,7 +221,9 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                          self.config_entry.data[CONF_LOGIN_NAME])
             
             headers = {'Content-Type': 'application/json'}
-            response = requests.post(TOKEN_URL, json=token_credentials, headers=headers)
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.post(TOKEN_URL, json=token_credentials, headers=headers, timeout=10)
+            )
             response.raise_for_status()
             data = response.json()
             if data.get('code') == 200:
@@ -261,7 +263,9 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             }
 
             # Appeler l'API
-            response = requests.get(SET_POWER_URL, headers=headers, params=params)
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.get(SET_POWER_URL, headers=headers, params=params, timeout=10)
+            )
             response.raise_for_status()
             data = response.json()
 
@@ -297,7 +301,9 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             }
 
             # Appeler l'API
-            response = requests.get(SET_THRESHOLD_URL, headers=headers, params=params)
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.get(SET_THRESHOLD_URL, headers=headers, params=params, timeout=10)
+            )
             response.raise_for_status()
             data = response.json()
 
