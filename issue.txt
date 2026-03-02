@@ -1,0 +1,13 @@
+j'ai cette erreur avec lintegration personnalisée storcube_Ha sur home assistant.
+Erreur dans la boucle de mise à jour REST: Detected that custom integration 'storcube_ha' calls async_write_ha_state from a thread other than the event loop, which may cause Home Assistant to crash or data to corrupt. For more information, see https://developers.home-assistant.io/docs/asyncio_thread_safety/#async_write_ha_state at custom_components/storcube_ha/sensor.py, line 1449: self.async_write_ha_state(). Please create a bug report at https://github.com/jon7119/storcube_Ha/issues
+Erreur dans la boucle de mise à jour REST: 'firmware'
+
+En remplaçant self.async_write_ha_state() par self.hass.add_job(self.async_write_ha_state) dans sensor.py, j'ai cette erreur qui apparait.
+Error updating battery status: Detected that custom integration 'storcube_ha' calls async_write_ha_state from a thread other than the event loop, which may cause Home Assistant to crash or data to corrupt. For more information, see https://developers.home-assistant.io/docs/asyncio_thread_safety/#async_write_ha_state at custom_components/storcube_ha/sensor.py, line 533: self.async_write_ha_state(). Please create a bug report at https://github.com/jon7119/storcube_Ha/issues
+
+J'ai aussi cette erreur qui apparait
+Structure de payload invalide: {'rest_data': {'sceneAlias': None, 'sceneId': None, 'sceneCode': None, 'outputType': 'manual', 'equipId': '9105231027496277', 'reserved': 75, 'outputPower': 100, 'workStatus': 1, 'fgOnline': 1, 'equipType': 'HES', 'mainEquipOnline': 1, 'bluetoothName': '0', 'bluetoothDeviceId': None, 'equipModelCode': 'S1000', 'equipIds': ['9105231027496277'], 'annexEquipIds': None, 'createTime': '2024-07-12 13:45:17'}}
+Structure de payload invalide: {'firmware': {'current_version': '1.1.0', 'latest_version': '1.1.0', 'upgrade_available': False, 'firmware_notes': [], 'last_check': '2026-03-02T13:27:41.552362'}}
+Structure de payload invalide: {'firmware': {'current_version': '1.1.0', 'latest_version': '1.1.0', 'upgrade_available': False, 'firmware_notes': [], 'last_check': '2026-03-02T13:37:41.662483'}}
+Structure de payload invalide: {'firmware': {'current_version': '1.1.0', 'latest_version': '1.1.0', 'upgrade_available': False, 'firmware_notes': [], 'last_check': '2026-03-02T13:47:41.778036'}}
+Structure de payload invalide: {'firmware': {'current_version': '1.1.0', 'latest_version': '1.1.0', 'upgrade_available': False, 'firmware_notes': [], 'last_check': '2026-03-02T13:57:41.895066'}}
