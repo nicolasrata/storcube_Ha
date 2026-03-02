@@ -452,10 +452,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                         if self.config_entry.entry_id in self.hass.data[DOMAIN]:
                             sensors = self.hass.data[DOMAIN][self.config_entry.entry_id].get("sensors", [])
                             for sensor in sensors:
-                                await self.hass.async_add_executor_job(
-                                    sensor.handle_state_update,
-                                    {"rest_data": self.data["rest_api"][equip_id]}
-                                )
+                                sensor.handle_state_update({"rest_data": self.data["rest_api"][equip_id]})
                         
                         _LOGGER.info("Données REST mises à jour pour l'équipement %s", equip_id)
                 else:
@@ -474,10 +471,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                             sensors = self.hass.data[DOMAIN][self.config_entry.entry_id].get("sensors", [])
                             for sensor in sensors:
                                 if hasattr(sensor, 'handle_state_update'):
-                                    await self.hass.async_add_executor_job(
-                                        sensor.handle_state_update,
-                                        {"firmware": self.data["firmware"]}
-                                    )
+                                    sensor.handle_state_update({"firmware": self.data.get("firmware", {})})
                         _LOGGER.info("Données firmware mises à jour")
                     else:
                         _LOGGER.warning("Échec de la vérification firmware automatique")
