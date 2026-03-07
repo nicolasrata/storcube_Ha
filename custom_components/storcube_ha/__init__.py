@@ -43,6 +43,11 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def create_lovelace_view():
         await asyncio.sleep(5)  # Attendre 5 secondes
         try:
+            # Vérifier si le service est disponible
+            if not hass.services.has_service("lovelace", "save_config"):
+                _LOGGER.warning("Le service lovelace.save_config n'est pas disponible. La vue Lovelace automatique ne sera pas créée.")
+                return
+
             await hass.services.async_call(
                 "lovelace",
                 "save_config",
