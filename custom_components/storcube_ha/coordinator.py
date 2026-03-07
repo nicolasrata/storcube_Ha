@@ -325,7 +325,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             token = await self.get_auth_token()
             if not token:
                 _LOGGER.error("Impossible de récupérer le token d'authentification")
-                return None
+                return {}
 
             # Préparer les paramètres de la requête
             headers = {
@@ -350,14 +350,17 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                                 return scene_list[0]
                         
                         _LOGGER.warning("Aucune donnée de scène trouvée")
-                        return None
+                        return {}
+                    elif response.status == 404:
+                        _LOGGER.warning("API Scènes indisponible (404), passage à la suite...")
+                        return {}
                     else:
                         _LOGGER.error(f"Erreur HTTP lors de la récupération des données de scène: {response.status}")
-                        return None
+                        return {}
 
         except Exception as e:
             _LOGGER.error("Erreur lors de la récupération des données de scène: %s", str(e))
-            return None
+            return {}
 
     async def check_firmware_upgrade(self):
         """Vérifier les mises à jour de firmware."""

@@ -43,21 +43,40 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def create_lovelace_view():
         await asyncio.sleep(5)  # Attendre 5 secondes
         try:
-            if hass.services.has_service("lovelace", "save_config"):
-                await hass.services.async_call(
-                    "lovelace",
-                    "save_config",
-                    {
-                        "config": {
-                            "views": [
-                                {
-                                    "title": "Storcube",
-                                    "path": "storcube",
-                                    "type": "custom:grid-layout",
-                                    "layout": {
-                                        "grid-template-columns": "repeat(2, 1fr)",
-                                        "grid-gap": "16px",
-                                        "padding": "16px"
+            # Vérifier si le service est disponible
+            if not hass.services.has_service("lovelace", "save_config"):
+                _LOGGER.warning("Le service lovelace.save_config n'est pas disponible. La vue Lovelace automatique ne sera pas créée.")
+                return
+
+            await hass.services.async_call(
+                "lovelace",
+                "save_config",
+                {
+                    "config": {
+                        "views": [
+                            {
+                                "title": "Storcube",
+                                "path": "storcube",
+                                "type": "custom:grid-layout",
+                                "layout": {
+                                    "grid-template-columns": "repeat(2, 1fr)",
+                                    "grid-gap": "16px",
+                                    "padding": "16px"
+                                },
+                                "cards": [
+                                    {
+                                        "type": "custom:mini-graph-card",
+                                        "title": "État de la Batterie",
+                                        "entities": [
+                                            "sensor.etat_batterie_storcube",
+                                            "sensor.capacite_batterie_storcube"
+                                        ],
+                                        "hours_to_show": 24,
+                                        "points_per_hour": 2,
+                                        "show": {
+                                            "legend": True,
+                                            "labels": True
+                                        }
                                     },
                                     "cards": [
                                         {

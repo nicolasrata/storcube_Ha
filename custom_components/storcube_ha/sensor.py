@@ -257,15 +257,18 @@ async def create_lovelace_view(hass: HomeAssistant, config_entry: ConfigEntry) -
     }
 
     try:
-        if hass.services.has_service("lovelace", "save_config"):
-            # Ajouter la vue à la configuration Lovelace existante
-            await hass.services.async_call(
-                "lovelace",
-                "save_config",
-                {
-                    "config": {
-                        "views": [view_config]
-                    }
+        # Vérifier si le service est disponible
+        if not hass.services.has_service("lovelace", "save_config"):
+            _LOGGER.warning("Le service lovelace.save_config n'est pas disponible. La vue Lovelace automatique ne sera pas créée.")
+            return
+
+        # Ajouter la vue à la configuration Lovelace existante
+        await hass.services.async_call(
+            "lovelace",
+            "save_config",
+            {
+                "config": {
+                    "views": [view_config]
                 }
             )
             _LOGGER.info("Vue Lovelace Storcube créée avec succès")
@@ -1261,20 +1264,25 @@ async def output_api_to_mqtt(hass: HomeAssistant, config: ConfigType, config_ent
                                     output_url,
                                     headers=headers
                                 ) as response:
-                                    response_text = await response.text()
-                                    _LOGGER.debug("Réponse API output brute: %s", response_text)
-                                    
-                                    try:
-                                        json_data = json.loads(response_text)
-                                        if json_data.get("code") == 200 and "data" in json_data:
-                                            data_list = json_data.get("data", [])
-                                            if data_list and isinstance(data_list, list):
-                                                equip_data = data_list[0]
-                                                _LOGGER.info("Mise à jour des capteurs avec les données de l'API output: %s", equip_data)
-                                                for sensor in hass.data[DOMAIN][config_entry.entry_id]["sensors"]:
-                                                    sensor.handle_state_update({"rest_data": equip_data})
-                                    except json.JSONDecodeError as e:
-                                        _LOGGER.warning("Impossible de décoder la réponse JSON de l'API output: %s", e)
+                                    if response.status == 200:
+                                        response_text = await response.text()
+                                        _LOGGER.debug("Réponse API output brute: %s", response_text)
+
+                                        try:
+                                            json_data = json.loads(response_text)
+                                            if json_data.get("code") == 200 and "data" in json_data:
+                                                data_list = json_data.get("data", [])
+                                                if data_list and isinstance(data_list, list):
+                                                    equip_data = data_list[0]
+                                                    _LOGGER.info("Mise à jour des capteurs avec les données de l'API output: %s", equip_data)
+                                                    for sensor in hass.data[DOMAIN][config_entry.entry_id]["sensors"]:
+                                                        sensor.handle_state_update({"rest_data": equip_data})
+                                        except json.JSONDecodeError as e:
+                                            _LOGGER.warning("Impossible de décoder la réponse JSON de l'API output: %s", e)
+                                    elif response.status == 404:
+                                        _LOGGER.warning("API Scènes indisponible (404), passage à la suite...")
+                                    else:
+                                        _LOGGER.error(f"Erreur HTTP lors de la récupération des données de scène: {response.status}")
                                 
                                 # Attendre 30 secondes avant le prochain appel
                                 await asyncio.sleep(30)
