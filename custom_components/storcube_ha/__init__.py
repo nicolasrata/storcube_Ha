@@ -17,6 +17,7 @@ from homeassistant.const import (
     Platform,
 )
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.typing import ConfigType
 
 from .const import (
@@ -78,44 +79,27 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                                             "labels": True
                                         }
                                     },
-                                    "cards": [
-                                        {
-                                            "type": "custom:mini-graph-card",
-                                            "title": "État de la Batterie",
-                                            "entities": [
-                                                "sensor.etat_batterie_storcube",
-                                                "sensor.capacite_batterie_storcube"
-                                            ],
-                                            "hours_to_show": 24,
-                                            "points_per_hour": 2,
-                                            "show": {
-                                                "legend": True,
-                                                "labels": True
-                                            }
-                                        },
-                                        {
-                                            "type": "custom:mini-graph-card",
-                                            "title": "Puissance",
-                                            "entities": [
-                                                "sensor.puissance_charge_storcube",
-                                                "sensor.puissance_decharge_storcube"
-                                            ],
-                                            "hours_to_show": 24,
-                                            "points_per_hour": 2,
-                                            "show": {
-                                                "legend": True,
-                                                "labels": True
-                                            }
+                                    {
+                                        "type": "custom:mini-graph-card",
+                                        "title": "Puissance",
+                                        "entities": [
+                                            "sensor.puissance_charge_storcube",
+                                            "sensor.puissance_decharge_storcube"
+                                        ],
+                                        "hours_to_show": 24,
+                                        "points_per_hour": 2,
+                                        "show": {
+                                            "legend": True,
+                                            "labels": True
                                         }
-                                    ]
-                                }
-                            ]
-                        }
+                                    }
+                                ]
+                            }
+                        ]
                     }
-                )
-                _LOGGER.info("Vue Lovelace créée avec succès")
-            else:
-                _LOGGER.debug("Service lovelace.save_config non disponible lors de l'initialisation")
+                }
+            )
+            _LOGGER.info("Vue Lovelace créée avec succès")
         except Exception as e:
             _LOGGER.error("Erreur lors de la création de la vue Lovelace: %s", str(e))
 
