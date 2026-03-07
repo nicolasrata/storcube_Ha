@@ -347,7 +347,11 @@ class StorcubeBatteryLevelSensor(StorcubeBatterySensor):
             if self._websocket_data and "list" in self._websocket_data and self._websocket_data["list"]:
                 equip = self._websocket_data["list"][0]
                 if "soc" in equip:
-                    self._attr_native_value = equip["soc"]
+                    new_soc = equip["soc"]
+                    # On ne met à jour que si la valeur est supérieure à 0
+                    # Cela évite les chutes à 0 lors des erreurs 404 ou des bugs API
+                    if new_soc is not None and new_soc > 0:
+                        self._attr_native_value = new_soc
         except Exception as e:
             _LOGGER.error("Error updating battery level: %s", e)
 
@@ -391,10 +395,24 @@ class StorcubeBatteryThresholdSensor(StorcubeBatterySensor):
         try:
             if self._websocket_data and "list" in self._websocket_data and self._websocket_data["list"]:
                 equip = self._websocket_data["list"][0]
-                if "reserved" in equip:
-                    self._attr_native_value = equip["reserved"]
+                
+                # On récupère la valeur brute
+                raw_soc = equip.get("soc")
+                
+                # Vérification stricte :
+                # 1. On vérifie que raw_soc n'est pas None
+                # 2. On vérifie que c'est un nombre (int ou float)
+                # 3. On vérifie que c'est strictement supérieur à 0
+                if isinstance(raw_soc, (int, float)) and raw_soc > 0:
+                    self._attr_native_value = raw_soc
+                else:
+                    # On ne touche pas à self._attr_native_value, 
+                    # donc l'ancien état est conservé dans l'interface.
+                    if raw_soc is not None:
+                         _LOGGER.debug("Valeur SOC ignorée car incorrecte : %s", raw_soc)
+                         
         except Exception as e:
-            _LOGGER.error("Error updating battery threshold: %s", e)
+            _LOGGER.error("Error updating battery level: %s", e)
 
 class StorcubeBatteryTemperatureSensor(StorcubeBatterySensor):
     """Représentation de la température de la batterie."""
