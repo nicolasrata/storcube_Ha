@@ -43,57 +43,60 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     async def create_lovelace_view():
         await asyncio.sleep(5)  # Attendre 5 secondes
         try:
-            await hass.services.async_call(
-                "lovelace",
-                "save_config",
-                {
-                    "config": {
-                        "views": [
-                            {
-                                "title": "Storcube",
-                                "path": "storcube",
-                                "type": "custom:grid-layout",
-                                "layout": {
-                                    "grid-template-columns": "repeat(2, 1fr)",
-                                    "grid-gap": "16px",
-                                    "padding": "16px"
-                                },
-                                "cards": [
-                                    {
-                                        "type": "custom:mini-graph-card",
-                                        "title": "État de la Batterie",
-                                        "entities": [
-                                            "sensor.etat_batterie_storcube",
-                                            "sensor.capacite_batterie_storcube"
-                                        ],
-                                        "hours_to_show": 24,
-                                        "points_per_hour": 2,
-                                        "show": {
-                                            "legend": True,
-                                            "labels": True
-                                        }
+            if hass.services.has_service("lovelace", "save_config"):
+                await hass.services.async_call(
+                    "lovelace",
+                    "save_config",
+                    {
+                        "config": {
+                            "views": [
+                                {
+                                    "title": "Storcube",
+                                    "path": "storcube",
+                                    "type": "custom:grid-layout",
+                                    "layout": {
+                                        "grid-template-columns": "repeat(2, 1fr)",
+                                        "grid-gap": "16px",
+                                        "padding": "16px"
                                     },
-                                    {
-                                        "type": "custom:mini-graph-card",
-                                        "title": "Puissance",
-                                        "entities": [
-                                            "sensor.puissance_charge_storcube",
-                                            "sensor.puissance_decharge_storcube"
-                                        ],
-                                        "hours_to_show": 24,
-                                        "points_per_hour": 2,
-                                        "show": {
-                                            "legend": True,
-                                            "labels": True
+                                    "cards": [
+                                        {
+                                            "type": "custom:mini-graph-card",
+                                            "title": "État de la Batterie",
+                                            "entities": [
+                                                "sensor.etat_batterie_storcube",
+                                                "sensor.capacite_batterie_storcube"
+                                            ],
+                                            "hours_to_show": 24,
+                                            "points_per_hour": 2,
+                                            "show": {
+                                                "legend": True,
+                                                "labels": True
+                                            }
+                                        },
+                                        {
+                                            "type": "custom:mini-graph-card",
+                                            "title": "Puissance",
+                                            "entities": [
+                                                "sensor.puissance_charge_storcube",
+                                                "sensor.puissance_decharge_storcube"
+                                            ],
+                                            "hours_to_show": 24,
+                                            "points_per_hour": 2,
+                                            "show": {
+                                                "legend": True,
+                                                "labels": True
+                                            }
                                         }
-                                    }
-                                ]
-                            }
-                        ]
+                                    ]
+                                }
+                            ]
+                        }
                     }
-                }
-            )
-            _LOGGER.info("Vue Lovelace créée avec succès")
+                )
+                _LOGGER.info("Vue Lovelace créée avec succès")
+            else:
+                _LOGGER.debug("Service lovelace.save_config non disponible lors de l'initialisation")
         except Exception as e:
             _LOGGER.error("Erreur lors de la création de la vue Lovelace: %s", str(e))
 

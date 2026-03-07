@@ -204,9 +204,10 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
         """Récupérer le token d'authentification."""
         # Utilisez le stockage sécurisé pour stocker le token
         storage_key = f"{DOMAIN}_auth_token"
-        token = await storage.async_get(self.hass, storage_key)
-        if token:
-            return token
+        store = storage.Store(self.hass, 1, storage_key)
+        token_data = await store.async_load()
+        if token_data and isinstance(token_data, dict) and "token" in token_data:
+            return token_data["token"]
 
         # Si le token n'existe pas, effectuez l'authentification
         try:
@@ -220,13 +221,16 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                          self.config_entry.data[CONF_LOGIN_NAME])
             
             headers = {'Content-Type': 'application/json'}
-            response = requests.post(TOKEN_URL, json=token_credentials, headers=headers)
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.post(TOKEN_URL, json=token_credentials, headers=headers, timeout=10)
+            )
             response.raise_for_status()
             data = response.json()
             if data.get('code') == 200:
                 _LOGGER.info("Token récupéré avec succès")
                 self._auth_token = data['data']['token']
-                await storage.async_set(self.hass, storage_key, self._auth_token)
+                store = storage.Store(self.hass, 1, storage_key)
+                await store.async_save({"token": self._auth_token})
                 return self._auth_token
             raise Exception(f"Erreur d'authentification: {data.get('message', 'Réponse inconnue')}")
         except Exception as e:
@@ -259,7 +263,9 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             }
 
             # Appeler l'API
-            response = requests.get(SET_POWER_URL, headers=headers, params=params)
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.get(SET_POWER_URL, headers=headers, params=params, timeout=10)
+            )
             response.raise_for_status()
             data = response.json()
 
@@ -295,7 +301,9 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             }
 
             # Appeler l'API
-            response = requests.get(SET_THRESHOLD_URL, headers=headers, params=params)
+            response = await self.hass.async_add_executor_job(
+                lambda: requests.get(SET_THRESHOLD_URL, headers=headers, params=params, timeout=10)
+            )
             response.raise_for_status()
             data = response.json()
 
@@ -452,10 +460,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                         if self.config_entry.entry_id in self.hass.data[DOMAIN]:
                             sensors = self.hass.data[DOMAIN][self.config_entry.entry_id].get("sensors", [])
                             for sensor in sensors:
-                                await self.hass.async_add_executor_job(
-                                    sensor.handle_state_update,
-                                    {"rest_data": self.data["rest_api"][equip_id]}
-                                )
+                                sensor.handle_state_update({"rest_data": self.data["rest_api"][equip_id]})
                         
                         _LOGGER.info("Données REST mises à jour pour l'équipement %s", equip_id)
                 else:
@@ -474,10 +479,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                             sensors = self.hass.data[DOMAIN][self.config_entry.entry_id].get("sensors", [])
                             for sensor in sensors:
                                 if hasattr(sensor, 'handle_state_update'):
-                                    await self.hass.async_add_executor_job(
-                                        sensor.handle_state_update,
-                                        {"firmware": self.data["firmware"]}
-                                    )
+                                    sensor.handle_state_update({"firmware": self.data.get("firmware", {})})
                         _LOGGER.info("Données firmware mises à jour")
                     else:
                         _LOGGER.warning("Échec de la vérification firmware automatique")
