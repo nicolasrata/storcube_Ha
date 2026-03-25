@@ -240,22 +240,26 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                         self._session = aiohttp.ClientSession()
 
                     try:
-                        async with self._session.get(output_url, headers=headers, timeout=5) as response:
+                        async with self._session.get(output_url, headers=headers, timeout=10) as response:
                             if response.status == 200:
                                 res_json = await response.json()
-                                if res_json.get("code") == 200 and res_json.get("data"):
-                                    scene_data = res_json["data"][0]
-                                    _LOGGER.debug("Données REST reçues pour %s", self._device_id)
-                                    self._internal_data["rest_api"] = scene_data
-                                    self._internal_data["last_rest_update"] = datetime.now()
-                                    self._notify_sensors({"rest_data": scene_data})
+                                # On vérifie si c'est bien un dictionnaire et si le code est 200
+                                if isinstance(res_json, dict) and res_json.get("code") == 200:
+                                    data_list = res_json.get("data")
+                                    if isinstance(data_list, list) and len(data_list) > 0:
+                                        # On récupère les données réelles de l'appareil
+                                        device_info = data_list[0]
+                                        _LOGGER.debug("Données REST reçues pour %s", self._device_id)
+                                        self._internal_data["rest_api"] = device_info
+                                        self._internal_data["last_rest_update"] = datetime.now()
+                                        self._notify_sensors({"rest_data": device_info})
                             elif response.status == 401:
                                 _LOGGER.warning("Token expiré, tentative de rafraîchissement...")
                                 self._auth_token = None
                             elif response.status == 404:
-                                _LOGGER.warning("API REST Scènes (404) indisponible pour %s", self._device_id)
+                                _LOGGER.warning("API Scènes indisponible (404) pour %s, passage à la suite...", self._device_id)
                             else:
-                                _LOGGER.debug("Erreur API REST : %s", response.status)
+                                _LOGGER.debug("Erreur API REST pour %s : %s", self._device_id, response.status)
                     except asyncio.TimeoutError:
                         _LOGGER.debug("Timeout API REST pour %s, on continue...", self._device_id)
 

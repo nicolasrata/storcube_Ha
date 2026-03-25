@@ -145,11 +145,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    data = hass.data[DOMAIN].get(entry.entry_id)
+
+    # Extraire le coordinateur qu'il soit stocké en direct ou en dictionnaire
+    if isinstance(data, dict) and "coordinator" in data:
+        coordinator = data["coordinator"]
+    else:
+        coordinator = data
+
+    if coordinator and hasattr(coordinator, "async_shutdown"):
+        await coordinator.async_shutdown()
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        coordinator = hass.data[DOMAIN].get(entry.entry_id)
-        if coordinator:
-            await coordinator.async_shutdown()
         hass.data[DOMAIN].pop(entry.entry_id)
         
         # Décharger les services
