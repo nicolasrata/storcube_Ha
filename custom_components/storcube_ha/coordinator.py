@@ -55,7 +55,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=None, # On gère nos propres boucles
         )
         self.config_entry = config_entry
-        self.data = {
+        self._internal_data = {
             "websocket": {},
             "rest_api": {},
             "firmware": {},
@@ -158,7 +158,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                     ping_timeout=5
                 ) as websocket:
                     _LOGGER.info("WebSocket connecté")
-                    self.data["ws_connected"] = True
+                    self._internal_data["ws_connected"] = True
 
                     # Demander les rapports pour notre appareil
                     request_data = {"reportEquip": [self._device_id]}
@@ -191,8 +191,8 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
 
                                 if device_data:
                                     _LOGGER.debug("Données WebSocket reçues pour %s", self._device_id)
-                                    self.data["websocket"] = device_data
-                                    self.data["last_ws_update"] = datetime.now()
+                                    self._internal_data["websocket"] = device_data
+                                    self._internal_data["last_ws_update"] = datetime.now()
                                     self._notify_sensors({"websocket_data": device_data})
 
                         except asyncio.TimeoutError:
@@ -201,16 +201,16 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                         except json.JSONDecodeError:
                             _LOGGER.warning("Erreur décodage JSON WebSocket")
                         except Exception as e:
-                            _LOGGER.error("Erreur dans la réception WebSocket: %s", e)
+                            _LOGGER.exception("Erreur dans la réception WebSocket: %s", e)
                             break
 
             except Exception as e:
-                _LOGGER.error("Erreur connexion WebSocket: %s", e)
-                self.data["ws_connected"] = False
+                _LOGGER.exception("Erreur connexion WebSocket: %s", e)
+                self._internal_data["ws_connected"] = False
                 self._auth_token = None # Forcer rafraîchissement token au prochain tour
             
             _LOGGER.info("Reconnexion WebSocket dans 10 secondes...")
-            self.data["ws_connected"] = False
+            self._internal_data["ws_connected"] = False
             await asyncio.sleep(10)
 
     async def _rest_loop(self):
@@ -218,7 +218,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
         while True:
             try:
                 # Intervalle dynamique : 15s si WS déconnecté (pour le fallback), 30s si WS connecté
-                interval = 15 if not self.data["ws_connected"] else 30
+                interval = 15 if not self._internal_data["ws_connected"] else 30
                 
                 token = await self.get_auth_token()
                 if token:
@@ -239,8 +239,8 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                                 if res_json.get("code") == 200 and res_json.get("data"):
                                     scene_data = res_json["data"][0]
                                     _LOGGER.debug("Données REST reçues pour %s", self._device_id)
-                                    self.data["rest_api"] = scene_data
-                                    self.data["last_rest_update"] = datetime.now()
+                                    self._internal_data["rest_api"] = scene_data
+                                    self._internal_data["last_rest_update"] = datetime.now()
                                     self._notify_sensors({"rest_data": scene_data})
                             elif response.status == 401:
                                 _LOGGER.warning("Token expiré, tentative de rafraîchissement...")
@@ -253,7 +253,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                         _LOGGER.debug("Timeout API REST pour %s, on continue...", self._device_id)
 
             except Exception as e:
-                _LOGGER.error("Erreur boucle REST: %s", e)
+                _LOGGER.exception("Erreur boucle REST: %s", e)
             
             await asyncio.sleep(interval)
 
@@ -264,16 +264,16 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
                 _LOGGER.info("Vérification firmware...")
                 info = await self.firmware_manager.check_firmware_upgrade()
                 if info:
-                    self.data["firmware"] = {
+                    self._internal_data["firmware"] = {
                         "current_version": info.get("current_version", "Inconnue"),
                         "latest_version": info.get("latest_version", "Inconnue"),
                         "upgrade_available": info.get("upgrade_available", False),
                         "firmware_notes": info.get("firmware_notes", []),
                         "last_check": datetime.now().isoformat()
                     }
-                    self._notify_sensors({"firmware": self.data["firmware"]})
+                    self._notify_sensors({"firmware": self._internal_data["firmware"]})
             except Exception as e:
-                _LOGGER.error("Erreur vérification firmware: %s", e)
+                _LOGGER.exception("Erreur vérification firmware: %s", e)
             
             await asyncio.sleep(3600) # Toutes les heures
 

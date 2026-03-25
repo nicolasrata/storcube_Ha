@@ -85,7 +85,7 @@ class StorcubeThresholdNumber(NumberEntity):
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        val = self.coordinator.data.get("websocket", {}).get("reserved") or self.coordinator.data.get("rest_api", {}).get("reserved")
+        val = self.coordinator._internal_data.get("websocket", {}).get("reserved") or self.coordinator._internal_data.get("rest_api", {}).get("reserved")
         if val is not None:
             self._attr_native_value = float(val)
 

@@ -109,7 +109,7 @@ class StorcubeBatterySensor(SensorEntity):
 
     def _is_ws_fresh(self):
         """Vérifie si les données WebSocket sont récentes."""
-        last_ws = self.coordinator.data.get("last_ws_update")
+        last_ws = self.coordinator._internal_data.get("last_ws_update")
         if not last_ws:
             return False
         return (datetime.now() - last_ws).total_seconds() < WS_STALE_THRESHOLD
@@ -660,6 +660,6 @@ class StorcubeFirmwareSensor(StorcubeBatterySensor):
             cv = self._firmware_data.get("current_version", "Inconnue")
             ua = self._firmware_data.get("upgrade_available", False)
             self._attr_native_value = f"{cv} (MàJ dispos)" if ua else cv
-        elif self.coordinator.data.get("firmware"):
-            f = self.coordinator.data["firmware"]
+        elif self.coordinator._internal_data.get("firmware"):
+            f = self.coordinator._internal_data["firmware"]
             self._attr_native_value = f.get("current_version", "Inconnue")
