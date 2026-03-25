@@ -63,6 +63,9 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             "last_rest_update": None,
             "ws_connected": False,
         }
+        # On synchronise self.data pour la compatibilité avec DataUpdateCoordinator
+        self.data = self._internal_data
+
         self.hass = hass
         self._auth_token = None
         self._ws_task = None
@@ -79,6 +82,10 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
             auth_password=config_entry.data[CONF_AUTH_PASSWORD],
             app_code=config_entry.data.get(CONF_APP_CODE, DEFAULT_APP_CODE)
         )
+
+    def get(self, key, default=None):
+        """Proxy pour la méthode get sur les données internes."""
+        return self._internal_data.get(key, default)
 
     async def get_auth_token(self, force_refresh=False):
         """Récupérer le token d'authentification."""
