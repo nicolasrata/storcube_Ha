@@ -67,7 +67,7 @@ async def async_setup_entry(
     ]
 
     async_add_entities(sensors)
-    hass.data[DOMAIN][config_entry.entry_id]["sensors"] = sensors
+    coordinator.sensors = sensors
 
 class StorcubeBatterySensor(SensorEntity):
     """Capteur pour les données de la batterie solaire."""

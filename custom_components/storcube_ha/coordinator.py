@@ -70,6 +70,7 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
         self._firmware_task = None
         self._device_id = config_entry.data[CONF_DEVICE_ID]
         self._session = None
+        self.sensors = []
         
         self.firmware_manager = StorCubeFirmwareManager(
             hass=hass,
@@ -278,11 +279,9 @@ class StorCubeDataUpdateCoordinator(DataUpdateCoordinator):
 
     def _notify_sensors(self, payload):
         """Notifier les capteurs des nouvelles données."""
-        if DOMAIN in self.hass.data and self.config_entry.entry_id in self.hass.data[DOMAIN]:
-            sensors = self.hass.data[DOMAIN][self.config_entry.entry_id].get("sensors", [])
-            for sensor in sensors:
-                if hasattr(sensor, 'handle_state_update'):
-                    sensor.handle_state_update(payload)
+        for sensor in self.sensors:
+            if hasattr(sensor, 'handle_state_update'):
+                sensor.handle_state_update(payload)
 
     async def async_shutdown(self):
         """Arrêter le coordinateur."""
