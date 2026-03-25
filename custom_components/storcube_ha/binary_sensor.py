@@ -1,17 +1,15 @@
 """Capteur binaire pour l'intégration Storcube Battery Monitor."""
-import json
 from homeassistant.components.binary_sensor import (
     BinarySensorDeviceClass,
     BinarySensorEntity,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.const import CONF_DEVICE_ID
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity import DeviceInfo
 
 from .const import DOMAIN, ICON_CONNECTION
-from .coordinator import StorcubeDataUpdateCoordinator
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -20,42 +18,66 @@ async def async_setup_entry(
 ) -> None:
     """Configurer le capteur binaire basé sur une entrée de configuration."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
+    device_id = config_entry.data[CONF_DEVICE_ID]
 
-    # Créer un capteur binaire pour chaque batterie
-    entities = []
-    for equip_id in coordinator.data:
-        entities.append(StorCubeBatteryConnectionSensor(coordinator, equip_id))
+    async_add_entities([StorCubeBatteryConnectionSensor(coordinator, device_id)])
 
-    async_add_entities(entities)
-
-class StorCubeBatteryConnectionSensor(CoordinatorEntity, BinarySensorEntity):
+class StorCubeBatteryConnectionSensor(BinarySensorEntity):
     """Capteur binaire pour l'état de la connexion de la batterie."""
 
     _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
     _attr_icon = ICON_CONNECTION
+    _attr_has_entity_name = True
 
-    def __init__(self, coordinator: StorcubeDataUpdateCoordinator, equip_id: str) -> None:
+    def __init__(self, coordinator, device_id: str) -> None:
         """Initialiser le capteur."""
-        super().__init__(coordinator)
-        self._equip_id = equip_id
-        self._attr_unique_id = f"{equip_id}_connection"
-        self._attr_name = f"StorCube Battery {equip_id} Status"
+        self.coordinator = coordinator
+        self._device_id = device_id
+        self._attr_unique_id = f"{device_id}_connection"
+        self._attr_name = "Statut Connexion"
 
     @property
     def device_info(self) -> DeviceInfo:
         """Retourner les informations sur l'appareil."""
         return DeviceInfo(
-            identifiers={(DOMAIN, self._equip_id)},
-            name=f"Batterie StorCube {self._equip_id}",
+            identifiers={(DOMAIN, self._device_id)},
+            name=f"Batterie StorCube {self._device_id}",
             manufacturer="StorCube",
         )
 
     @property
     def is_on(self) -> bool:
         """Retourner l'état de la connexion."""
-        try:
-            data = self.coordinator.data.get(self._equip_id, {}).get("battery_status", "{}")
-            value = json.loads(data).get("value", 0)
-            return value == 1
-        except (json.JSONDecodeError, KeyError, AttributeError):
-            return False 
+        # On considère connecté si le WebSocket est actif ou si on a eu une mise à jour REST récente
+        ws_connected = self.coordinator._internal_data.get("ws_connected", False)
+        if ws_connected:
+            return True
+
+        last_rest = self.coordinator._internal_data.get("last_rest_update")
+        if last_rest:
+            # Si on a eu une mise à jour REST il y a moins de 60s, on considère comme connecté
+            from datetime import datetime
+            return (datetime.now() - last_rest).total_seconds() < 60
+
+        return False
+
+    @property
+    def should_poll(self) -> bool:
+        return False
+
+    async def async_added_to_hass(self) -> None:
+        """When entity is added to hass."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self.coordinator.async_add_listener(self._handle_coordinator_update)
+        )
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        """Handle updated data from the coordinator."""
+        self.async_write_ha_state()
+
+    @callback
+    def handle_state_update(self, payload: dict) -> None:
+        """Gérer la mise à jour de l'état depuis le coordinateur."""
+        self.async_write_ha_state()
